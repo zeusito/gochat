@@ -5,23 +5,24 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 	"github.com/zeusito/gochat/config"
+	"github.com/zeusito/gochat/internal/services/chat"
 	"go.uber.org/zap"
 )
 
 // WebSocketServer Holder for the server configurations
 type WebSocketServer struct {
-	Logger *zap.SugaredLogger
-	sc     config.ServerConfigurations
+	Logger     *zap.SugaredLogger
+	sc         config.ServerConfigurations
+	sessionSvc chat.IService
 }
 
 // NewWebSocketServer Initializes a new server
-func NewWebSocketServer(logger *zap.SugaredLogger, serverConf config.ServerConfigurations) *WebSocketServer {
+func NewWebSocketServer(logger *zap.SugaredLogger, serverConf config.ServerConfigurations, ss chat.IService) *WebSocketServer {
 	return &WebSocketServer{
-		Logger: logger,
-		sc:     serverConf,
+		Logger:     logger,
+		sc:         serverConf,
+		sessionSvc: ss,
 	}
 }
 
@@ -32,29 +33,7 @@ func (s *WebSocketServer) Start() {
 
 	// Registering the websocket handler
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		conn, _, _, err := ws.UpgradeHTTP(r, w)
-
-		if err != nil {
-			s.Logger.Errorf("Failed to upgrade the http connection to websocket. %v", err)
-			return
-		}
-
-		// background thread to read messages from the websocket
-		go func() {
-			defer conn.Close()
-
-			s.Logger.Info("New websocket connection established")
-
-			for {
-				msg, op, err := wsutil.ReadClientData(conn)
-				if err != nil {
-					s.Logger.Warnf("Failed to read message from websocket. %v", err)
-					return
-				}
-
-				s.Logger.Infof("Message: %s, Op: %d", string(msg), op)
-			}
-		}()
+		s.sessionSvc.HandleNewConnection(w, r)
 	})
 
 	// Customizing the server

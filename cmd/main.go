@@ -1,8 +1,10 @@
 package main
 
 import (
+	"github.com/go-playground/validator/v10"
 	"github.com/zeusito/gochat/config"
 	"github.com/zeusito/gochat/internal/controllers"
+	"github.com/zeusito/gochat/internal/services/chat"
 )
 
 func main() {
@@ -13,10 +15,13 @@ func main() {
 	// Configs
 	configs := config.LoadConfig(logger)
 
-	// Server Router
-	server := controllers.NewWebSocketServer(logger, configs.Server)
+	// Validator
+	validate := validator.New()
 
 	// -- Dependency Injection --
+	chatService := chat.NewDefaultService(logger, validate)
+
+	server := controllers.NewWebSocketServer(logger, configs.Server, chatService)
 	// -- End of Dependency Injection --
 
 	// Fun begins
