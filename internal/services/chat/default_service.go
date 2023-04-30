@@ -6,18 +6,21 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gobwas/ws"
 	"github.com/zeusito/gochat/internal/models"
+	"github.com/zeusito/gochat/internal/services/jose"
 	"go.uber.org/zap"
 )
 
 type DefaultService struct {
 	log      *zap.SugaredLogger
 	validate *validator.Validate
+	joseSvc  jose.IService
 }
 
-func NewDefaultService(l *zap.SugaredLogger, v *validator.Validate) *DefaultService {
+func NewDefaultService(l *zap.SugaredLogger, v *validator.Validate, js jose.IService) *DefaultService {
 	return &DefaultService{
 		log:      l,
 		validate: v,
+		joseSvc:  js,
 	}
 }
 

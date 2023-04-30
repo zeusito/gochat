@@ -5,6 +5,7 @@ import (
 	"github.com/zeusito/gochat/config"
 	"github.com/zeusito/gochat/internal/controllers"
 	"github.com/zeusito/gochat/internal/services/chat"
+	"github.com/zeusito/gochat/internal/services/jose"
 )
 
 func main() {
@@ -18,8 +19,15 @@ func main() {
 	// Validator
 	validate := validator.New()
 
+	// Jose
+	joseService, err := jose.NewService(logger, configs.Keys.Public)
+	if err != nil {
+		logger.Fatalf("Failed to create jose service. %v", err)
+		return
+	}
+
 	// -- Dependency Injection --
-	chatService := chat.NewDefaultService(logger, validate)
+	chatService := chat.NewDefaultService(logger, validate, joseService)
 
 	server := controllers.NewWebSocketServer(logger, configs.Server, chatService)
 	// -- End of Dependency Injection --
