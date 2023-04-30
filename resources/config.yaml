@@ -1,0 +1,6 @@
+server:
+  port: 3000
+  debug-mode: true
+
+keys:
+  public: resources/keys/public.pem
