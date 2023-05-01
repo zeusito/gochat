@@ -1,92 +1,62 @@
 package chat
 
 import (
-	"net/http"
+	"net"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/gobwas/ws"
 	"github.com/zeusito/gochat/internal/models"
-	"github.com/zeusito/gochat/internal/services/jose"
+	"github.com/zeusito/gochat/internal/repositories/session"
 	"go.uber.org/zap"
 )
 
 type DefaultService struct {
-	log      *zap.SugaredLogger
-	validate *validator.Validate
-	joseSvc  jose.IService
+	log          *zap.SugaredLogger
+	validate     *validator.Validate
+	sessionStore session.IRepository
 }
 
-func NewDefaultService(l *zap.SugaredLogger, v *validator.Validate, js jose.IService) *DefaultService {
+func NewDefaultService(l *zap.SugaredLogger, v *validator.Validate, sr session.IRepository) *DefaultService {
 	return &DefaultService{
-		log:      l,
-		validate: v,
-		joseSvc:  js,
+		log:          l,
+		validate:     v,
+		sessionStore: sr,
 	}
 }
 
-func (s *DefaultService) HandleNewConnection(w http.ResponseWriter, r *http.Request) {
-	conn, _, _, err := ws.UpgradeHTTP(r, w)
-
-	if err != nil {
-		s.log.Errorf("Failed to upgrade the http connection to websocket. %v", err)
-		return
+func (s *DefaultService) MemberJoin(claims models.MyClaims, conn net.Conn) {
+	// Create a new session
+	sess := &models.Session{
+		Id:               claims.UserID,
+		Conn:             conn,
+		Claims:           claims,
+		Validator:        s.validate,
+		Authenticated:    true,
+		OnMessageHandler: s.onNewMessage,
+		OnErrorHandler:   s.onError,
+		OnClose:          s.onClose,
 	}
 
-	s.log.Infof("New connection from %s", conn.RemoteAddr().String())
+	// Welcome the user
+	_ = sess.WriteMessage(models.MyMessage{
+		Type: models.ChatMessageType,
+		Data: "Welcome " + claims.UserName + "! You are now connected to the chat server.",
+	})
 
-	// Wrap the connection in a session
-	sess := &Session{
-		Id:               "anon",
-		Request:          r,
-		conn:             conn,
-		validator:        s.validate,
-		authenticated:    false,
-		onMessageHandler: s.HandleMessage,
-		onErrorHandler:   s.HandleError,
-		onClose:          s.HandleClose,
-	}
-
-	// Request the client to authenticate
-	err = sess.WriteMessage(models.PredefinedUnAuthMessage)
-	if err != nil {
-		s.log.Errorf("Failed to write message to client. %v", err)
-		sess.Close()
-		return
-	}
+	// Store the session
+	_ = s.sessionStore.Store(sess)
 
 	// Start the read loop
 	go sess.ReadLoop()
 }
 
-func (s *DefaultService) HandleMessage(session *Session, msg models.MyMessage) {
-	if msg.Type == models.AuthorizationMessageType {
-		// Ignore if already authenticated
-		if session.authenticated {
-			return
-		}
-
-		// Process JWT token
-
-		session.authenticated = true
-		return
-	}
-
-	// Check if session is authenticated, if not, request authentication
-	if !session.authenticated {
-		err := session.WriteMessage(models.PredefinedUnAuthMessage)
-		if err != nil {
-			s.log.Errorf("Failed to write message to client. %v", err)
-			session.Close()
-			return
-		}
-	}
-
+func (s *DefaultService) onNewMessage(session *models.Session, msg models.MyMessage) {
+	s.log.Infof("New message received from session %s. %v", session.Id, msg)
 }
 
-func (s *DefaultService) HandleError(session *Session, err error) {
+func (s *DefaultService) onError(session *models.Session, err error) {
 	s.log.Errorf("Error occurred in session %s. %v", session.Id, err)
 }
 
-func (s *DefaultService) HandleClose(session *Session) {
+func (s *DefaultService) onClose(session *models.Session) {
 	s.log.Infof("Session %s closed.", session.Id)
 }

@@ -52,10 +52,11 @@ func NewService(logger *zap.SugaredLogger, publicKey string) (*DefaultService, e
 func (s *DefaultService) Parse(jwsToken string) (*models.MyClaims, error) {
 
 	parsed, err := jwt.Parse([]byte(jwsToken), jwt.WithValidate(true), jwt.WithKey(jwa.RS256, s.publicKey),
-		jwt.WithIssuer("zeusito"), jwt.WithAudience("zeusito.me"), jwt.WithRequiredClaim("userId"))
+		jwt.WithIssuer("zeusito"), jwt.WithAudience("zeusito.me"), jwt.WithRequiredClaim("userId"),
+		jwt.WithRequiredClaim("userName"))
 
 	if err != nil {
-		return nil, errors.New("failed to parse token")
+		return nil, err
 	}
 
 	var userID, userName string

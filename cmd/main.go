@@ -4,6 +4,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/zeusito/gochat/config"
 	"github.com/zeusito/gochat/internal/controllers"
+	"github.com/zeusito/gochat/internal/repositories/session"
 	"github.com/zeusito/gochat/internal/services/chat"
 	"github.com/zeusito/gochat/internal/services/jose"
 )
@@ -27,9 +28,10 @@ func main() {
 	}
 
 	// -- Dependency Injection --
-	chatService := chat.NewDefaultService(logger, validate, joseService)
+	sessionRepo := session.NewInMemoryRepository(logger)
+	chatService := chat.NewDefaultService(logger, validate, sessionRepo)
 
-	server := controllers.NewWebSocketServer(logger, configs.Server, chatService)
+	server := controllers.NewWebSocketServer(logger, configs.Server, chatService, joseService)
 	// -- End of Dependency Injection --
 
 	// Fun begins

@@ -1,7 +1,11 @@
 package chat
 
-import "net/http"
+import (
+	"net"
+
+	"github.com/zeusito/gochat/internal/models"
+)
 
 type IService interface {
-	HandleNewConnection(w http.ResponseWriter, r *http.Request)
+	MemberJoin(claims models.MyClaims, conn net.Conn)
 }
