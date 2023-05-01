@@ -1,0 +1,8 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: my-config
+  namespace: my-namespace
+data:
+  config.yml:
+  {{ printf "environments/configmap.%s.yaml" .Values.environment | .Files.Get | toYaml | indent 4 }}
