@@ -47,3 +47,16 @@ func (r *InMemoryRepository) GetSessionCount() int {
 
 	return len(r.sessions)
 }
+
+func (r *InMemoryRepository) FindAll() []*models.Session {
+	r.rwMutex.RLock()
+	defer r.rwMutex.RUnlock()
+
+	sessions := make([]*models.Session, 0, len(r.sessions))
+
+	for _, sess := range r.sessions {
+		sessions = append(sessions, sess)
+	}
+
+	return sessions
+}

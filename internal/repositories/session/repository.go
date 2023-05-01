@@ -8,4 +8,5 @@ type IRepository interface {
 	Store(session *models.Session) error
 	FindOneByID(id string) (*models.Session, bool)
 	GetSessionCount() int
+	FindAll() []*models.Session
 }
