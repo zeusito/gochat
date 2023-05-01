@@ -22,7 +22,7 @@ FROM gcr.io/distroless/static
 COPY --from=build_base /tmp/gochat/out/gochat /app/gochat
 
 # Expose the container to the outside world
-EXPOSE 8080
+EXPOSE 3000
 
 # Run the program
 CMD ["/app/gochat"]
